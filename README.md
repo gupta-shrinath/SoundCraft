@@ -13,4 +13,4 @@
 - Uses MediaPlayer and MediaRecorder APIs.
 - Handles permission using registerForActivityResult API
 - Enables reactive updates using Kotlin Flow.
-- Click below to download the app
+- Click below to download the [app](https://github.com/gupta-shrinath/SoundCraft/raw/refs/heads/main/apk/soundcraft.apk)
