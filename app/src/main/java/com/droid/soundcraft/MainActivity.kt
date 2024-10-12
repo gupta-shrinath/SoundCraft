@@ -38,26 +38,16 @@ import java.io.FileOutputStream
 class MainActivity : ComponentActivity() {
     private lateinit var navController: NavController
     private val viewModel by viewModels<SoundCraftViewModel>()
+    private var permissionSource: MicPermissionSource? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val audioRecordingPermission =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-                if (isGranted) {
-                    navController.navigate(Screens.Recording)
-                } else {
-                    Toast.makeText(
-                        this,
-                        "Mic permission required to record",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
         val fileLoad =
             registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
                 uri?.let {
                     val contentResolver = this.contentResolver
-                    val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(contentResolver.getType(uri)) ?: return@let
-                    val file = File(this.cacheDir,"temp.$ext")
+                    val ext = MimeTypeMap.getSingleton()
+                        .getExtensionFromMimeType(contentResolver.getType(uri)) ?: return@let
+                    val file = File(this.cacheDir, "temp.$ext")
                     contentResolver.openInputStream(uri)?.use { inputStream ->
                         FileOutputStream(file).use { outputStream ->
                             inputStream.copyTo(outputStream)
@@ -65,6 +55,30 @@ class MainActivity : ComponentActivity() {
                     }
                     navController.navigate(Screens.Playback(file.absolutePath))
                 }
+            }
+        val audioRecordingPermission =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+                if (isGranted) {
+                    when (permissionSource) {
+                        is MicPermissionSource.FAB -> {
+                            fileLoad.launch(arrayOf("audio/*"))
+                        }
+                        is MicPermissionSource.RECORD_BUTTON ->  {navController.navigate(Screens.Recording)}
+                        else ->  {
+
+                        }
+                    }
+
+                } else
+                    Toast.makeText(
+                        this,
+                        when (permissionSource) {
+                            is MicPermissionSource.FAB -> MicPermissionSource.FAB().message
+                            is MicPermissionSource.RECORD_BUTTON -> MicPermissionSource.RECORD_BUTTON().message
+                            else -> MicPermissionSource.RECORD_BUTTON().message
+                        },
+                        Toast.LENGTH_SHORT
+                    ).show()
             }
         enableEdgeToEdge()
         setContent {
@@ -88,10 +102,11 @@ class MainActivity : ComponentActivity() {
                                 } else if (shouldShowRequestPermissionRationale(android.Manifest.permission.RECORD_AUDIO)) {
                                     Toast.makeText(
                                         context,
-                                        "Mic permission required to record",
+                                        MicPermissionSource.RECORD_BUTTON().message,
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 } else {
+                                    permissionSource = MicPermissionSource.RECORD_BUTTON()
                                     audioRecordingPermission.launch(android.Manifest.permission.RECORD_AUDIO)
                                 }
                             },
@@ -99,7 +114,23 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate(Screens.Playback(it))
                             },
                             onFABClick = {
-                                fileLoad.launch(arrayOf("audio/*"))
+                                if (ContextCompat.checkSelfPermission(
+                                        context,
+                                        android.Manifest.permission.RECORD_AUDIO
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    fileLoad.launch(arrayOf("audio/*"))
+                                } else if (shouldShowRequestPermissionRationale(android.Manifest.permission.RECORD_AUDIO)) {
+                                    Toast.makeText(
+                                        context,
+                                        MicPermissionSource.FAB().message,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    permissionSource = MicPermissionSource.FAB()
+                                    audioRecordingPermission.launch(android.Manifest.permission.RECORD_AUDIO)
+                                }
+
                             }
                         )
                     }
@@ -128,6 +159,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+sealed class MicPermissionSource(val message: String) {
+    class FAB : MicPermissionSource("Mic permission required to visualize audio. Please open Settings")
+
+    class RECORD_BUTTON : MicPermissionSource("Mic permission required to record. Please open Settings")
+}
+
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
