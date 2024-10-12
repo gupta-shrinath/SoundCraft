@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.droid.soundcraft.core.AudioPlayer
 import com.droid.soundcraft.core.formatMillisecondsToHMS
 import com.droid.soundcraft.ui.components.AudioVisualizer
+import com.droid.soundcraft.ui.components.Controller
 import com.droid.soundcraft.ui.components.PlayerSeekBar
 import kotlinx.coroutines.flow.Flow
 
