@@ -78,6 +78,4 @@ dependencies {
     testImplementation(libs.coroutines.test)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.robolectric)
-
-    testImplementation("org.robolectric:shadows-multidex:3.0")
 }
